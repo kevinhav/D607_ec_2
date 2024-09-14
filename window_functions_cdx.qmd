@@ -1,0 +1,81 @@
+---
+title: "Window Functions on Credit Index"
+author: "Kevin Havis"
+format: html
+---
+
+```{r}
+#| output: false
+library(tidyverse)
+library(lubridate)
+library(zoo)
+```
+## Introduction
+
+Our data is the 2024 prices for a credit default swap index, a product that has surged in popularity in the last decade.
+
+```{r}
+# Read data
+df <- read.csv('cdx_historical_data.csv')
+
+glimpse(df)
+
+```
+
+```{r}
+# Assign Date column to datetime
+
+df <- df |> 
+  mutate(Date = mdy(Date))
+
+```
+
+## Window Functions on Credit Index
+
+Use window functions to calculate the year-to-date average and the six-day moving average for each of the metrics
+
+```{r}
+# Calculate year-to-date
+
+df <- df |> 
+  arrange(Date) |> 
+  group_by(year = year(Date)) |> 
+  mutate(across(-Date, cumsum, .names = "ytd_{.col}"))
+```
+
+```{r}
+# Calculate rolling 6 day average
+
+df <- df |> 
+  arrange(Date) |> 
+  mutate(across
+         (c("Close.Last", "Volume", "Open", "High", "Low"),
+           ~ rollapply(
+             .x,
+             width = 6,
+             FUN = mean,
+             fill = NA,
+             partial = TRUE,
+             align = 'right'),
+           .names = "roll_mean_{.col}")
+         )
+
+```
+
+## Visualize
+
+Note sometimes the High and the Low averages diverge sharply, which usually reflects a intra-day announcement that significantly affected the market and in this case is "mellowed" by the rolling average. For a CDX, this is usually related to announcements or expectations on Federal rate changes.
+
+```{r}
+ggplot(df, aes(x = Date)) +
+  geom_line(aes(y = roll_mean_High, color = "High")) +
+  geom_line(aes(y = roll_mean_Low, color = "Low")) +
+  labs(
+    title = "6 Day Rolling Average of CDX.NA.IG",
+    x = "Date",
+    y = "6 Day Rolling Average",
+    color = "Price"
+  )
+
+```
+
