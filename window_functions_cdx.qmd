@@ -14,6 +14,8 @@ library(zoo)
 
 Our data is the 2024 prices for a credit default swap index, a product that has surged in popularity in the last decade.
 
+In this document we will use window functions to calculate the year-to-date and rolling six day average of this index.
+
 ```{r}
 # Read data
 df <- read.csv('cdx_historical_data.csv')
